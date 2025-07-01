@@ -13,6 +13,25 @@
         box-sizing: border-box;
       }
 
+      #excelOptions input[type="number"],
+      #excelOptions input[type="text"] {
+        padding: 6px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+      }
+
+      #excelOptions label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      #excelOptions small {
+        font-size: 0.8rem;
+        color: #718096;
+      }
+
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
@@ -385,7 +404,28 @@
             onchange="handleExcelFile(this.files[0])"
           />
         </div>
-
+        <!-- Add inside the Excel→JSON tab, right after the upload area -->
+            <div id="excelOptions" style="margin: 20px 0; padding: 15px; background: #f0f4ff; border-radius: 8px; display: block;">
+              <h4>⚙️ Conversion Options</h4>
+              
+              <div style="margin: 10px 0;">
+                <label for="headerRow">Header Row (contains language names):</label>
+                <input type="number" id="headerRow" min="1" value="1" style="width: 60px; margin-left: 10px;">
+              </div>
+              
+              <div style="margin: 10px 0;">
+                <label for="dataRows">Data Rows (key-value pairs):</label>
+                <input type="text" id="dataRows" placeholder="e.g. 2-100 or 2-" value="2-" style="margin-left: 10px; width: 120px;">
+                <small style="display: block; margin-top: 5px; color: #718096;">Use "2-" to include all rows after row 2</small>
+              </div>
+              
+              <div style="margin: 10px 0;">
+                <label>
+                  <input type="checkbox" id="sanitizeKeys" checked>
+                  Sanitize keys (spaces→underscores, lowercase)
+                </label>
+              </div>
+            </div>
         <div id="excelPreview" style="display: none">
           <div class="preview-section">
             <div class="preview-header">
@@ -534,23 +574,49 @@
             return str.replace(/'/g, "\\'");
           }
 
+          function switchTab(tabId) {
+  // Update tab buttons
+            document.querySelectorAll(".tab-btn").forEach((btn) => btn.classList.remove("active"));
+            event.target.classList.add("active");
 
-      function switchTab(tabId) {
-        // Update tab buttons
-        document
-          .querySelectorAll(".tab-btn")
-          .forEach((btn) => btn.classList.remove("active"));
-        event.target.classList.add("active");
+            // Update tab content
+            document.querySelectorAll(".tab-content").forEach((content) => content.classList.remove("active"));
+            document.getElementById(tabId).classList.add("active");
 
-        // Update tab content
-        document
-          .querySelectorAll(".tab-content")
-          .forEach((content) => content.classList.remove("active"));
-        document.getElementById(tabId).classList.add("active");
+            // Show/hide options panel
+            const optionsPanel = document.getElementById('excelOptions');
+            if (tabId === 'excel-to-json') {
+              optionsPanel.style.display = 'block';
+            } else {
+              optionsPanel.style.display = 'none';
+            }
 
-        // Clear status
-        showStatus("", "info");
-      }
+            // Clear status
+            showStatus("", "info");
+          }
+
+      // function switchTab(tabId) {
+      //   // Update tab buttons
+      //   document
+      //     .querySelectorAll(".tab-btn")
+      //     .forEach((btn) => btn.classList.remove("active"));
+      //   event.target.classList.add("active");
+
+      //   // Update tab content
+      //   document
+      //     .querySelectorAll(".tab-content")
+      //     .forEach((content) => content.classList.remove("active"));
+      //   document.getElementById(tabId).classList.add("active");
+
+      //   const optionsPanel = document.getElementById('excelOptions');
+      //       if (tabId === 'excel-to-json') {
+      //         optionsPanel.style.display = 'block';
+      //       } else {
+      //         optionsPanel.style.display = 'none';
+      //       }
+      //   // Clear status
+      //   showStatus("", "info");
+      // }
 
       function showStatus(message, type = "info") {
         const statusEl = document.getElementById("statusMessage");
@@ -669,131 +735,203 @@
         }
       }
 
+      // function processExcelData(data) {
+      //   currentData = {};
+
+      //   // Filter out completely empty rows
+      //   const filteredData = data.filter(
+      //     (row) =>
+      //       row &&
+      //       Array.isArray(row) &&
+      //       row.some(
+      //         (cell) =>
+      //           cell !== null &&
+      //           cell !== undefined &&
+      //           cell.toString().trim() !== ""
+      //       )
+      //   );
+
+      //   if (filteredData.length < 2) {
+      //     showStatus(
+      //       "❌ Excel file must have at least a header row and one data row",
+      //       "error"
+      //     );
+      //     return;
+      //   }
+
+      //   const headers = filteredData[0] || [];
+
+      //   // Safe language extraction - handle null/undefined/empty values
+      //   const languages = [];
+      //   for (let i = 1; i < headers.length; i++) {
+      //     const lang = headers[i];
+      //     if (
+      //       lang !== null &&
+      //       lang !== undefined &&
+      //       lang.toString().trim() !== ""
+      //     ) {
+      //       languages.push(lang.toString().trim());
+      //     } else {
+      //       // Add placeholder for empty column headers
+      //       languages.push(`Language_${i}`);
+      //     }
+      //   }
+
+      //   // Remove any trailing empty language columns
+      //   while (
+      //     languages.length > 0 &&
+      //     languages[languages.length - 1].startsWith("Language_")
+      //   ) {
+      //     // Check if this column has any data
+      //     let hasData = false;
+      //     for (let rowIdx = 1; rowIdx < filteredData.length; rowIdx++) {
+      //       const row = filteredData[rowIdx] || [];
+      //       const cellValue = row[languages.length]; // +1 because we removed one
+      //       if (
+      //         cellValue !== null &&
+      //         cellValue !== undefined &&
+      //         cellValue.toString().trim() !== ""
+      //       ) {
+      //         hasData = true;
+      //         break;
+      //       }
+      //     }
+      //     if (!hasData) {
+      //       languages.pop();
+      //     } else {
+      //       break;
+      //     }
+      //   }
+
+      //   console.log("Detected languages:", languages);
+
+      //   // Initialize language objects
+      //   languages.forEach((lang) => {
+      //     currentData[lang] = {};
+      //   });
+
+      //   // Process each row
+      //   for (let i = 1; i < filteredData.length; i++) {
+      //     const row = filteredData[i] || [];
+      //     const key = row[0];
+
+      //     // Skip rows without a key
+      //     if (key === null || key === undefined || key.toString().trim() === "")
+      //       continue;
+
+      //     const cleanKey = key.toString().trim();
+
+      //     // Process each language column
+      //     languages.forEach((lang, langIndex) => {
+      //       const colIndex = langIndex + 1; // +1 because first column is key
+      //       const value = row[colIndex];
+
+      //       if (
+      //         value !== null &&
+      //         value !== undefined &&
+      //         value.toString().trim() !== ""
+      //       ) {
+      //         currentData[lang][cleanKey] = value.toString().trim();
+      //       }
+      //     });
+      //   }
+
+      //   // Remove languages with no translations
+      //   const languagesToRemove = [];
+      //   Object.keys(currentData).forEach((lang) => {
+      //     if (Object.keys(currentData[lang]).length === 0) {
+      //       languagesToRemove.push(lang);
+      //     }
+      //   });
+
+      //   languagesToRemove.forEach((lang) => {
+      //     delete currentData[lang];
+      //   });
+
+      //   console.log("Processed data:", currentData);
+
+      //   if (Object.keys(currentData).length === 0) {
+      //     showStatus(
+      //       "❌ No valid translations found. Please check your Excel format.",
+      //       "error"
+      //     );
+      //     return;
+      //   }
+
+      //   displayExcelPreview();
+      // }
       function processExcelData(data) {
-        currentData = {};
+                                          currentData = {};
 
-        // Filter out completely empty rows
-        const filteredData = data.filter(
-          (row) =>
-            row &&
-            Array.isArray(row) &&
-            row.some(
-              (cell) =>
-                cell !== null &&
-                cell !== undefined &&
-                cell.toString().trim() !== ""
-            )
-        );
+                                          // Get user options
+                                          const headerRow = parseInt(document.getElementById('headerRow').value) - 1; // convert to 0-based
+                                          const dataRows = document.getElementById('dataRows').value.trim();
+                                          const sanitize = document.getElementById('sanitizeKeys').checked;
 
-        if (filteredData.length < 2) {
-          showStatus(
-            "❌ Excel file must have at least a header row and one data row",
-            "error"
-          );
-          return;
-        }
+                                          // Validate header row
+                                          if (headerRow < 0 || headerRow >= data.length) {
+                                            showStatus("❌ Invalid header row number", "error");
+                                            return;
+                                          }
 
-        const headers = filteredData[0] || [];
+                                          // Parse data row range
+                                          let startRow, endRow;
+                                          try {
+                                            if (dataRows.includes('-')) {
+                                              [start, end] = dataRows.split('-').map(n => n.trim() === '' ? null : parseInt(n) - 1);
+                                              startRow = start || 0;
+                                              endRow = end === null ? data.length - 1 : end;
+                                            } else {
+                                              startRow = parseInt(dataRows) - 1;
+                                              endRow = data.length - 1;
+                                            }
+                                          } catch (e) {
+                                            showStatus("❌ Invalid row range format", "error");
+                                            return;
+                                          }
 
-        // Safe language extraction - handle null/undefined/empty values
-        const languages = [];
-        for (let i = 1; i < headers.length; i++) {
-          const lang = headers[i];
-          if (
-            lang !== null &&
-            lang !== undefined &&
-            lang.toString().trim() !== ""
-          ) {
-            languages.push(lang.toString().trim());
-          } else {
-            // Add placeholder for empty column headers
-            languages.push(`Language_${i}`);
-          }
-        }
+                                          // Extract languages from header row
+                                          const languages = data[headerRow].slice(1).filter(cell => cell !== null);
 
-        // Remove any trailing empty language columns
-        while (
-          languages.length > 0 &&
-          languages[languages.length - 1].startsWith("Language_")
-        ) {
-          // Check if this column has any data
-          let hasData = false;
-          for (let rowIdx = 1; rowIdx < filteredData.length; rowIdx++) {
-            const row = filteredData[rowIdx] || [];
-            const cellValue = row[languages.length]; // +1 because we removed one
-            if (
-              cellValue !== null &&
-              cellValue !== undefined &&
-              cellValue.toString().trim() !== ""
-            ) {
-              hasData = true;
-              break;
-            }
-          }
-          if (!hasData) {
-            languages.pop();
-          } else {
-            break;
-          }
-        }
+                                          // Initialize language objects
+                                          languages.forEach(lang => {
+                                            currentData[lang] = {};
+                                          });
 
-        console.log("Detected languages:", languages);
+                                          // Process data rows
+                                          for (let i = startRow; i <= endRow && i < data.length; i++) {
+                                            const row = data[i];
+                                            if (!row || row.length === 0) continue;
 
-        // Initialize language objects
-        languages.forEach((lang) => {
-          currentData[lang] = {};
-        });
+                                            let key = row[0]?.toString().trim() || '';
+                                            if (sanitize) {
+                                              key = key
+                                                .toLowerCase()
+                                                .replace(/\s+/g, '_')
+                                                .replace(/[^a-z0-9_]/g, '');
+                                            }
 
-        // Process each row
-        for (let i = 1; i < filteredData.length; i++) {
-          const row = filteredData[i] || [];
-          const key = row[0];
+                                            if (!key) continue;
 
-          // Skip rows without a key
-          if (key === null || key === undefined || key.toString().trim() === "")
-            continue;
+                                            // Process each language column
+                                            languages.forEach((lang, idx) => {
+                                              const value = row[idx + 1]; // +1 because first column is key
+                                              if (value !== null && value !== undefined) {
+                                                currentData[lang][key] = value.toString().trim();
+                                              }
+                                            });
+                                          }
 
-          const cleanKey = key.toString().trim();
+                                          // Remove languages with no translations
+                                          Object.keys(currentData).forEach(lang => {
+                                            if (Object.keys(currentData[lang]).length === 0) {
+                                              delete currentData[lang];
+                                            }
+                                          });
 
-          // Process each language column
-          languages.forEach((lang, langIndex) => {
-            const colIndex = langIndex + 1; // +1 because first column is key
-            const value = row[colIndex];
-
-            if (
-              value !== null &&
-              value !== undefined &&
-              value.toString().trim() !== ""
-            ) {
-              currentData[lang][cleanKey] = value.toString().trim();
-            }
-          });
-        }
-
-        // Remove languages with no translations
-        const languagesToRemove = [];
-        Object.keys(currentData).forEach((lang) => {
-          if (Object.keys(currentData[lang]).length === 0) {
-            languagesToRemove.push(lang);
-          }
-        });
-
-        languagesToRemove.forEach((lang) => {
-          delete currentData[lang];
-        });
-
-        console.log("Processed data:", currentData);
-
-        if (Object.keys(currentData).length === 0) {
-          showStatus(
-            "❌ No valid translations found. Please check your Excel format.",
-            "error"
-          );
-          return;
-        }
-
-        displayExcelPreview();
-      }
+                                          displayExcelPreview();
+                                          showStatus("✅ Excel processed with custom options!", "success");
+                                        }
 
       function displayExcelPreview() {
         const previewEl = document.getElementById("excelPreview");
