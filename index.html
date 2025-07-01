@@ -869,37 +869,57 @@ async function downloadSingleJSON(language) {
     showStatus(`❌ Error downloading ${language}: ${error.message}`, "error");
   }
 }
-      async function downloadAllJSON() {
-        const loadingEl = document.getElementById("downloadLoading");
-        loadingEl.style.display = "inline-block";
+   async function downloadAllJSON() {
+  const loadingEl = document.getElementById("downloadLoading");
+  loadingEl.style.display = "inline-block";
 
-        try {
-          const zip = new JSZip();
+  try {
+    const zip     = new JSZip();
+    const format  = document.getElementById("outputFormat").value;
 
-          Object.keys(currentData).forEach((lang) => {
-            const jsonContent = JSON.stringify(currentData[lang], null, 2);
-            zip.file(`${lang}.json`, jsonContent);
-          });
+    for (const lang of Object.keys(currentData)) {
+      const data = currentData[lang];
 
-          const content = await zip.generateAsync({ type: "blob" });
-          const success = await downloadFile(
-            "localization_files.zip",
-            content,
-            "application/zip"
-          );
-          if (success !== false) {
-            showStatus(
-              "✅ All JSON files downloaded as ZIP successfully!",
-              "success"
-            );
-          }
-        } catch (error) {
-          showStatus("❌ Error creating ZIP file: " + error.message, "error");
-        } finally {
-          loadingEl.style.display = "none";
-        }
+      let content, filename;
+
+      switch (format) {
+        case "dart":
+          content  = convertToDartMap(lang, data);
+          filename = `${sanitizeFileName(lang)}.dart`;
+          break;
+
+        case "arb":
+          content  = convertToARB(lang, data);
+          filename = `${sanitizeFileName(lang)}.arb`;
+          break;
+
+        case "map":
+          content  = JSON.stringify(data, null, 2);
+          filename = `${sanitizeFileName(lang)}.json`;
+          break;
+
+        default: // "json"
+          content  = JSON.stringify(data, null, 2);
+          filename = `${sanitizeFileName(lang)}.json`;
+          break;
       }
-      // Enhanced JSON parsing (replace your existing JSON parsing):
+
+      zip.file(filename, content);
+    }
+
+    const blob   = await zip.generateAsync({ type: "blob" });
+    const zipName = `flutter_localizations_${format}.zip`;
+
+    const success = await downloadFile(zipName, blob, "application/zip");
+    if (success !== false) {
+      showStatus(`✅ All ${format.toUpperCase()} files zipped successfully!`, "success");
+    }
+  } catch (error) {
+    showStatus(`❌ ZIP creation failed: ${error.message}`, "error");
+  } finally {
+    loadingEl.style.display = "none";
+  }
+}  // Enhanced JSON parsing (replace your existing JSON parsing):
 function parseFlexibleJSON(text) {
   try {
     // Try standard JSON first
