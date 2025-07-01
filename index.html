@@ -77,6 +77,7 @@
         margin-bottom: 10px;
         background: linear-gradient(135deg, #667eea, #764ba2);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
       }
 
@@ -388,22 +389,6 @@
 
       <!-- Excel to JSON Tab -->
       <div id="excel-to-json" class="tab-content active">
-        <div
-          class="upload-area"
-          id="excelUploadArea"
-          onclick="document.getElementById('excelFile').click()"
-        >
-          <div class="upload-icon">📂</div>
-          <h3>Drop your Excel file here or click to browse</h3>
-          <p>Supports .xlsx, .xls files</p>
-          <input
-            type="file"
-            id="excelFile"
-            class="file-input"
-            accept=".xlsx,.xls"
-            onchange="handleExcelFile(this.files[0])"
-          />
-        </div>
         <!-- Add inside the Excel→JSON tab, right after the upload area -->
             <div id="excelOptions" style="margin: 20px 0; padding: 15px; background: #f0f4ff; border-radius: 8px; display: block;">
               <h4>⚙️ Conversion Options</h4>
@@ -425,7 +410,34 @@
                   Sanitize keys (spaces→underscores, lowercase)
                 </label>
               </div>
+              <!-- idr paste krna hai usko bs -->
+               <div class="format-selector" style="margin: 20px 0;">
+                <h4>Select Output Format:</h4>
+                <select id="outputFormat" style="padding: 8px; border-radius: 4px;">
+                  <option value="json">JSON</option>
+                  <option value="dart">Dart GetX Map</option>
+                  <option value="arb">Flutter ARB</option>
+                  <option value="map">Plain Map</option>
+                </select>
+              </div>
             </div>
+        <div
+          class="upload-area"
+          id="excelUploadArea"
+          onclick="document.getElementById('excelFile').click()"
+        >
+          <div class="upload-icon">📂</div>
+          <h3>Drop your Excel file here or click to browse</h3>
+          <p>Supports .xlsx, .xls files</p>
+          <input
+            type="file"
+            id="excelFile"
+            class="file-input"
+            accept=".xlsx,.xls"
+            onchange="handleExcelFile(this.files[0])"
+          />
+        </div>
+        
         <div id="excelPreview" style="display: none">
           <div class="preview-section">
             <div class="preview-header">
@@ -503,16 +515,6 @@
       </div>
 
       <div id="statusMessage"></div>
-
-      <div class="format-selector" style="margin: 20px 0;">
-        <h4>Select Output Format:</h4>
-        <select id="outputFormat" style="padding: 8px; border-radius: 4px;">
-          <option value="json">JSON</option>
-          <option value="dart">Dart GetX Map</option>
-          <option value="arb">Flutter ARB</option>
-          <option value="map">Plain Map</option>
-        </select>
-      </div>
 
       <!-- Features Section -->
       <div class="feature-grid">
