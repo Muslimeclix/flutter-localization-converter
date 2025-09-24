@@ -945,7 +945,12 @@ function processExcelData(data) {
     if (sanitize) {
       key = key.toLowerCase().replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_]/gu, '');
        // if key starts with a digit, prepend an underscore
-      key = key.replace(/^\d+/, '');
+        const originalKey = key;
+        key = key.replace(/^\d+/, '');
+          // if key is empty (only numbers), use fallback
+        if (!key) {
+          key = 'key_' + originalKey;
+        }
 
       // check if key is a restricted keyword in lower case and append _key to it
       if(restrictedKeyWords.includes(key)){
