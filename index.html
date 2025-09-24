@@ -934,10 +934,20 @@ function processExcelData(data) {
       stats.emptyRows.push(i + 1);
       continue;
     }
-
+    const restrictedKeyWords = ['null', 'undefined', 'true', 'false', 'nan', 
+    'infinity', '-infinity', 'object', 'array','string', 'number', 'boolean', 'date', 'function',
+     'symbol', 'bigint', 'console', 'window', 'document', 'element', 'node', 'event', 'math', 'json', 
+    'regexp', 'error', 'promise', 'map', 'set', 'weakmap', 'weakset', 'intl', 'reflect', 'proxy', 
+    'continue', 'break', 'return', 'if', 'else', 'switch', 'case', 
+    'default', 'for', 'while', 'do', 'try', 'catch', 'finally', 'throw', 
+    'class', 'extends', 'super', 'this', 'new', 'in', 'of', 'typeof', 'void', 'delete'];
     let key = row[0]?.toString().trim() || '';
     if (sanitize) {
       key = key.toLowerCase().replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_]/gu, '');
+      // check if key is a restricted keyword in lower case and append _key to it
+      if(restrictedKeyWords.includes(key)){
+        key = key + '_key';
+      }
     }
 
     if (!key) {
@@ -1009,250 +1019,6 @@ function processExcelData(data) {
 };
 }
 
-// function processExcelData(data) {
-//   currentData = {};
-//   const stats = {
-//     emptyRows: [],
-//     invalidKeys: [],
-//     duplicateKeys: {},
-//     emptyColumns: [],
-//     totalRowsProcessed: 0,
-//     totalKeysGenerated: 0,
-//     originalRows: data.length
-//   };
-
-//   // Get user options
-//   const headerRow = parseInt(document.getElementById('headerRow').value) - 1;
-//   const dataRows = document.getElementById('dataRows').value.trim();
-//   const sanitize = document.getElementById('sanitizeKeys').checked;
-
-//   // Parse row range
-//   let startRow, endRow;
-//   try {
-//     if (dataRows.includes('-')) {
-//       const [start, end] = dataRows.split('-').map(n => n.trim() === '' ? null : parseInt(n) - 1);
-//       startRow = start || 0;
-//       endRow = end === null ? data.length - 1 : end;
-//     } else {
-//       startRow = parseInt(dataRows) - 1;
-//       endRow = data.length - 1;
-//     }
-//   } catch (e) {
-//     showStatus("❌ Invalid row range format", "error");
-//     return;
-//   }
-
-//   // Extract languages from header row
-//   // const languages = data[headerRow]?.slice(1).filter(cell => cell !== null) || [];
-//   const languages = data[headerRow]?.slice(1)
-//   .filter(cell => cell !== null && cell.toString().trim() !== '')
-//   .map(cell => cell.toString().trim()) || [];
-//   console.log("Detected languages:", languages);
-//   // Then add this to track empty columns:
-// const emptyColumnIndices = [];
-// data[headerRow]?.slice(1).forEach((cell, index) => {
-//   if (!cell || cell.toString().trim() === '') {
-//     emptyColumnIndices.push(index + 1); // +1 because we sliced from index 1
-//   }
-// });
-
-// if (emptyColumnIndices.length > 0) {
-//   console.log("Empty columns found at positions:", emptyColumnIndices);
-//   showStatus(`ℹ️ Skipped ${emptyColumnIndices.length} empty column(s)`, "info");
-// }
-
-//   // Initialize language objects
-//   languages.forEach(lang => {
-//     currentData[lang] = {};
-//   });
-
-//   // Track seen keys for duplicate detection
-//   const seenKeys = new Set();
-
-//   // Process data rows
-//   for (let i = startRow; i <= endRow && i < data.length; i++) {
-//     const row = data[i];
-//     if (!row || row.length === 0) {
-//       stats.emptyRows.push(i + 1); // Store 1-based row number
-//       continue;
-//     }
-
-//     let key = row[0]?.toString().trim() || '';
-//     if (sanitize) {
-//   key = key
-//     .toLowerCase()
-//     .replace(/\s+/g, '_')
-//     .replace(/[^\p{L}\p{N}_]/gu, '');  // Unicode-aware sanitization
-// }
-
-//     if (!key) {
-//       stats.invalidKeys.push(i + 1);
-//       continue;
-//     }
-
-//     // Track duplicates
-//     if (seenKeys.has(key)) {
-//       if (!stats.duplicateKeys[key]) stats.duplicateKeys[key] = [];
-//       stats.duplicateKeys[key].push(i + 1);
-//     } else {
-//       seenKeys.add(key);
-//     }
-
-//     // Process each language column
-//     languages.forEach((lang, idx) => {
-//   const originalColIndex = idx + 1; // +1 because first column is key
-//       if (emptyColumnIndices.includes(originalColIndex)) {
-//     return; // Skip this column if it's empty
-//   }
-//     const value = row[originalColIndex];
-
-//       if (value !== null && value !== undefined) {
-//         currentData[lang][key] = value.toString().trim();
-//       }
-//     });
-
-//     stats.totalRowsProcessed++;
-//   }
-
-//   // Remove languages with no translations
-//   Object.keys(currentData).forEach(lang => {
-//     if (Object.keys(currentData[lang]).length === 0) {
-//       delete currentData[lang];
-//       stats.emptyColumns.push(lang);
-//     }
-//   });
-
-//   stats.totalKeysGenerated = seenKeys.size;
-  
-//   // Display statistics
-//   displayProcessingStats(stats);
-  
-//   return stats;
-// }
-
-/**
- * 3. DISPLAY RESULTS - Shows processing statistics to the user
- */
-// function displayProcessingStats(stats) {
-//   if (!stats) return;
-
-//   let message = `
-//     <div class="status info">
-//       <h4 style="margin-top:0">Processing Summary</h4>
-//       <ul style="text-align:left; margin:5px 0; padding-left:20px">
-//         ${stats.emptyRows.length ? `<li>Empty rows removed: ${stats.emptyRows.length} (Rows: ${stats.emptyRows.join(', ')})</li>` : ''}
-//         ${stats.invalidKeys.length ? `<li>Invalid keys removed: ${stats.invalidKeys.length} (Rows: ${stats.invalidKeys.join(', ')})</li>` : ''}
-//         ${Object.keys(stats.duplicateKeys).length ? `<li>Duplicate keys found: ${Object.keys(stats.duplicateKeys).length} (Keys: ${Object.keys(stats.duplicateKeys).join(', ')})</li>` : ''}
-//         ${stats.emptyColumns.length ? `<li>Empty columns removed: ${stats.emptyColumns.length} (Columns: ${stats.emptyColumns.join(', ')})</li>` : ''}
-//         <li>Successfully processed: ${stats.totalRowsProcessed} of ${stats.originalRows} rows</li>
-//         <li>Generated keys: ${stats.totalKeysGenerated} unique keys</li>
-//       </ul>
-//     </div>
-//   `;
-
-//   // Add to status message (will appear above the preview)
-//   const statusEl = document.getElementById("statusMessage");
-//   statusEl.innerHTML += message;
-// }
-  
-
-// function processExcelData(data) {
-      //                                     currentData = {};
-
-      //                                     // Get user options
-      //                                     const headerRow = parseInt(document.getElementById('headerRow').value) - 1; // convert to 0-based
-      //                                     const dataRows = document.getElementById('dataRows').value.trim();
-      //                                     const sanitize = document.getElementById('sanitizeKeys').checked;
-
-      //                                     // Validate header row
-      //                                     if (headerRow < 0 || headerRow >= data.length) {
-      //                                       showStatus("❌ Invalid header row number", "error");
-      //                                       return;
-      //                                     }
-
-      //                                     // Parse data row range
-      //                                     let startRow, endRow;
-      //                                     try {
-      //                                       if (dataRows.includes('-')) {
-      //                                         [start, end] = dataRows.split('-').map(n => n.trim() === '' ? null : parseInt(n) - 1);
-      //                                         startRow = start || 0;
-      //                                         endRow = end === null ? data.length - 1 : end;
-      //                                       } else {
-      //                                         startRow = parseInt(dataRows) - 1;
-      //                                         endRow = data.length - 1;
-      //                                       }
-      //                                     } catch (e) {
-      //                                       showStatus("❌ Invalid row range format", "error");
-      //                                       return;
-      //                                     }
-
-      //                                     // Extract languages from header row
-      //                                     const languages = data[headerRow].slice(1).filter(cell => cell !== null);
-
-      //                                     // Initialize language objects
-      //                                     languages.forEach(lang => {
-      //                                       currentData[lang] = {};
-      //                                     });
-
-      //                                     // Process data rows
-      //                                     for (let i = startRow; i <= endRow && i < data.length; i++) {
-      //                                       const row = data[i];
-      //                                       if (!row || row.length === 0) continue;
-
-      //                                       let key = row[0]?.toString().trim() || '';
-      //                                       if (sanitize) {
-      //                                         key = key
-      //                                           .toLowerCase()
-      //                                           .replace(/\s+/g, '_')
-      //                                           .replace(/[^a-z0-9_]/g, '');
-      //                                       }
-
-      //                                       if (!key) continue;
-
-      //                                       // Process each language column
-      //                                       languages.forEach((lang, idx) => {
-      //                                         const value = row[idx + 1]; // +1 because first column is key
-      //                                         if (value !== null && value !== undefined) {
-      //                                           currentData[lang][key] = value.toString().trim();
-      //                                         }
-      //                                       });
-      //                                     }
-
-      //                                     // Remove languages with no translations
-      //                                     Object.keys(currentData).forEach(lang => {
-      //                                       if (Object.keys(currentData[lang]).length === 0) {
-      //                                         delete currentData[lang];
-      //                                       }
-      //                                     });
-
-      //                                     displayExcelPreview();
-      //                                     showStatus("✅ Excel processed with custom options!", "success");
-      //                                   }
-
-//       function displayProcessingStats(stats) {
-//   if (!stats) return;
-
-//   let message = `
-//     <div class="status info">
-//       <h4 style="margin-top:0">Processing Summary</h4>
-//       <ul style="text-align:left; margin:5px 0; padding-left:20px">
-//         ${stats.emptyRows.length ? `<li>Empty rows removed: ${stats.emptyRows.length} (Rows: ${stats.emptyRows.join(', ')})</li>` : ''}
-//         ${stats.invalidKeys.length ? `<li>Invalid keys removed: ${stats.invalidKeys.length} (Rows: ${stats.invalidKeys.join(', ')})</li>` : ''}
-//         ${Object.keys(stats.duplicateKeys).length ? `<li>Duplicate keys found: ${Object.keys(stats.duplicateKeys).length} (Keys: ${Object.keys(stats.duplicateKeys).join(', ')})</li>` : ''}
-//         ${stats.emptyColumns.length ? `<li>Empty columns removed: ${stats.emptyColumns.length} (Columns: ${stats.emptyColumns.join(', ')})</li>` : ''}
-//         <li>Successfully processed: ${stats.totalRowsProcessed} of ${stats.originalRows} rows</li>
-//         <li>Generated keys: ${stats.totalKeysGenerated} unique keys</li>
-//       </ul>
-//     </div>
-//   `;
-//   if (emptyColumnIndices.length > 0) {
-//   message += `<li>Empty columns skipped: ${emptyColumnIndices.length} (Positions: ${emptyColumnIndices.join(', ')})</li>`;
-// }
-
-//   // Add to status message (will appear above the preview)
-//   const statusEl = document.getElementById("statsStatusMessage");
-//   statusEl.innerHTML += message;
-// }
 function displayProcessingStats(stats) {
   if (!stats) return;
 
