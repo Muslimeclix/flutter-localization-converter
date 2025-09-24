@@ -934,13 +934,13 @@ function processExcelData(data) {
       stats.emptyRows.push(i + 1);
       continue;
     }
-    const restrictedKeyWords = ['null', 'undefined', 'true', 'false', 'nan', 
+    const restrictedKeyWords = Set(['null', 'undefined', 'true', 'false', 'nan', 
     'infinity', '-infinity', 'object', 'array','string', 'number', 'boolean', 'date', 'function',
      'symbol', 'bigint', 'console', 'window', 'document', 'element', 'node', 'event', 'math', 'json', 
     'regexp', 'error', 'promise', 'map', 'set', 'weakmap', 'weakset', 'intl', 'reflect', 'proxy', 
     'continue', 'break', 'return', 'if', 'else', 'switch', 'case', 
     'default', 'for', 'while', 'do', 'try', 'catch', 'finally', 'throw', 
-    'class', 'extends', 'super', 'this', 'new', 'in', 'of', 'typeof', 'void', 'delete'];
+    'class', 'extends', 'super', 'this', 'new', 'in', 'of', 'typeof', 'void', 'delete']);
     let key = row[0]?.toString().trim() || '';
     if (sanitize) {
       key = key.toLowerCase().replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_]/gu, '');
