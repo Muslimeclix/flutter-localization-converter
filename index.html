@@ -557,6 +557,30 @@
           .replace(/[^\p{L}\p{N}_]/gu, '')  // Keep Unicode letters and numbers
           .toLowerCase();
       }
+      
+      function extractLanguageCode(name) {
+            if (!name) return null;
+          
+            // Trim spaces
+            const cleaned = name.trim();
+          
+            // 1. Look for patterns like "English - en", "English-en"
+            const match = cleaned.match(/[-_\s]+([a-z]{2,3})(?:[_-][A-Z]{2})?$/i);
+            if (match) {
+              return match[1].toLowerCase();
+            }
+          
+            // 2. If format is like "app_en" or "file-fr"
+            const underscoreMatch = cleaned.match(/[_-]([a-z]{2,3})(?:[_-][A-Z]{2})?$/i);
+            if (underscoreMatch) {
+              return underscoreMatch[1].toLowerCase();
+            }
+          
+            // 3. As a fallback, return the sanitized text (last 2–3 letters)
+            const fallback = cleaned.slice(-3).toLowerCase();
+            return fallback.match(/^[a-z]{2,3}$/) ? fallback : null;
+          }
+
 
           function convertToDartMap(lang, data) {
             let output = `final Map<String, String> ${sanitizeFileName(lang)} = {\n`;
@@ -569,7 +593,7 @@
 
           function convertToARB(lang, data) {
             return JSON.stringify({
-              // "@@locale": sanitizeFileName(lang),
+              "@@locale": extractLanguageCode(lang),
               ...data
             }, null, 2);
           }
