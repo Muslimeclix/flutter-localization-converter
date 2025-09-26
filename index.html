@@ -934,7 +934,7 @@ function processExcelData(data) {
       stats.emptyRows.push(i + 1);
       continue;
     }
-    const restrictedKeyWords = Set(['null', 'undefined', 'true', 'false', 'nan', 
+    const restrictedKeyWords = new Set(['null', 'undefined', 'true', 'false', 'nan', 
     'infinity', '-infinity', 'object', 'array','string', 'number', 'boolean', 'date', 'function',
      'symbol', 'bigint', 'console', 'window', 'document', 'element', 'node', 'event', 'math', 'json', 
     'regexp', 'error', 'promise', 'map', 'set', 'weakmap', 'weakset', 'intl', 'reflect', 'proxy', 
@@ -953,7 +953,7 @@ function processExcelData(data) {
         }
 
       // check if key is a restricted keyword in lower case and append _key to it
-      if(restrictedKeyWords.includes(key)){
+      if(restrictedKeyWords.has(key)){
         key = key + '_key';
       }
     }
