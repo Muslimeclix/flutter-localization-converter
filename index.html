@@ -367,6 +367,87 @@
           transform: rotate(360deg);
         }
       }
+
+      /* Smart List Styles */
+      .stats-panel {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      
+      .stat-item {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        background: #f7fafc;
+        border-radius: 6px;
+      }
+      
+      .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2d3748;
+      }
+      
+      .stat-label {
+        font-size: 0.85rem;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      
+      .data-table th, .data-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 0.9rem;
+      }
+      
+      .data-table th {
+        background: #f7fafc;
+        font-weight: 600;
+        color: #4a5568;
+      }
+      
+      .data-table tr:last-child td {
+        border-bottom: none;
+      }
+      
+      .data-table tr:hover {
+        background: #f8fbff;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      
+      .badge-warning {
+        background: #feebc8;
+        color: #c05621;
+      }
+      
+      .badge-success {
+        background: #c6f6d5;
+        color: #2f855a;
+      }
     </style>
   </head>
   <body>
@@ -384,6 +465,9 @@
         </button>
         <button class="tab-btn" onclick="switchTab('json-to-excel')">
           🔄 JSON to Excel
+        </button>
+        <button class="tab-btn" onclick="switchTab('smart-list')">
+          📝 Smart List
         </button>
       </div>
 
@@ -472,7 +556,7 @@
             type="file"
             id="jsonFiles"
             class="file-input"
-            accept=".json"
+            accept=".json,.arb"
             multiple
             onchange="handleJSONFiles(this.files)"
           />
@@ -510,6 +594,78 @@
               </button>
             </div>
             <div id="jsonLanguageGrid" class="language-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart List Processor Tab -->
+      <div id="smart-list" class="tab-content">
+        <div style="background: #f0f9ff; padding: 20px; border-radius: 12px; border: 1px solid #bee3f8; margin-bottom: 25px;">
+          <h3 style="color: #2c5282; margin-bottom: 10px;">📝 Smart List Processor</h3>
+          <p style="color: #4a5568; margin-bottom: 15px;">
+            Paste a raw list of strings (newline separated) or a JSON array `["a", "b"]`. 
+            We'll automatically generate keys and handle duplicates for you.
+          </p>
+          
+          <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="autoGenerateKeys" checked>
+              <span>Auto-generate keys from text</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+               <span>Key Prefix:</span>
+              <input type="text" id="keyPrefix" placeholder="e.g. text_" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e0;">
+            </label>
+          </div>
+
+          <textarea
+            id="listInput"
+            class="json-textarea"
+            style="height: 200px;"
+            placeholder="Paste your list here...&#10;Example:&#10;Login&#10;Sign Up&#10;Forgot Password"
+          ></textarea>
+          
+          <div style="margin-top: 15px;">
+            <button class="btn" onclick="processSmartList()">⚡ Process List</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('listInput').value = '';" style="background: linear-gradient(135deg, #a0aec0, #718096);">🗑️ Clear</button>
+          </div>
+        </div>
+
+        <div id="listResults" style="display: none;">
+          <div class="preview-section">
+            <div class="preview-header">
+              <h3 class="preview-title">📊 Results</h3>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="exportListToExcel()">
+                  💾 Download Excel
+                </button>
+                <button class="btn btn-secondary" onclick="exportListToJSON()">
+                  📦 Download JSON
+                </button>
+              </div>
+            </div>
+            
+            <div class="stats-panel" id="listStats">
+              <!-- Stats populated by JS -->
+            </div>
+            
+            <div id="duplicateAlerts"></div>
+
+            <div style="max-height: 500px; overflow-y: auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Generated Key</th>
+                    <th>Original String / Value</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="listTableBody">
+                  <!-- Rows populated by JS -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -599,7 +755,12 @@
           }
 
           function escapeDartString(str) {
-            return str.replace(/'/g, "\\'");
+            return str
+              .replace(/\\/g, '\\\\') // Escape backslashes first
+              .replace(/'/g, "\\'")   // Escape single quotes
+              .replace(/\n/g, '\\n')  // Escape newlines
+              .replace(/\r/g, '')     // Remove carriage returns
+              .replace(/\$/g, '\\$'); // Escape interpolation
           }
 
           function switchTab(tabId) {
@@ -621,6 +782,7 @@
 
             // Clear status
             showStatus("", "info");
+            document.getElementById('listResults').style.display = 'none';
           }
 
       // function switchTab(tabId) {
@@ -684,32 +846,18 @@
         const reader = new FileReader();
         reader.onload = function (e) {
           try {
-            // Try different reading methods for better compatibility
             let workbook;
             try {
+               // Try reading as ArrayBuffer (default)
               workbook = XLSX.read(e.target.result, {
                 type: "array",
                 cellDates: false,
                 cellNF: false,
                 cellStyles: false,
               });
-
-              const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: null,
-        blankrows: false,
-        raw: false,
-      });
-
-      if (!jsonData || jsonData.length === 0) {
-        throw new Error("No data found in Excel file");
-      }
-
-      const stats = processExcelData(jsonData);
-      displayExcelPreview();
-      showStatus("✅ Excel file processed successfully!", "success");
             } catch (arrayError) {
               console.log("Array read failed, trying binary...", arrayError);
+               // Fallback to binary string
               workbook = XLSX.read(e.target.result, {
                 type: "binary",
                 cellDates: false,
@@ -747,7 +895,7 @@
               throw new Error("No data found in Excel file");
             }
 
-            // processExcelData(jsonData);
+             // Collect statistics first
             const stats = collectExcelStats(jsonData, {
               headerRow: parseInt(document.getElementById('headerRow').value) - 1,
                startRow: parseInt(document.getElementById('dataRows').value.split('-')[0]) - 1,
@@ -755,13 +903,12 @@
                sanitize: document.getElementById('sanitizeKeys').checked
                });
 
-               const result = processExcelData(jsonData);
+            // Process data for preview/download
+            const result = processExcelData(jsonData);
 
-                displayExcelPreview(); // Add this line
-                showStatus("✅ Excel file processed successfully!", "success");
-
-                // displayProcessingStats(stats);
+            displayExcelPreview();
             showStatus("✅ Excel file processed successfully!", "success");
+            
           } catch (error) {
             console.error("Excel processing error:", error);
             showStatus(
@@ -779,16 +926,9 @@
           showStatus("❌ Error reading file. Please try again.", "error");
         };
 
-        // Try reading as ArrayBuffer first, fallback to binary string
-        try {
-          reader.readAsArrayBuffer(file);
-        } catch (error) {
-          console.log(
-            "ArrayBuffer read failed, trying binary string...",
-            error
-          );
-          reader.readAsBinaryString(file);
-        }
+        // Try reading as ArrayBuffer first, fallback to binary string is handled inside onload if needed, 
+        // but we'll stick to ArrayBuffer as primary input for XLSX
+        reader.readAsArrayBuffer(file);
       }
 
       /**
@@ -1029,18 +1169,65 @@ function processExcelData(data) {
 
 function displayProcessingStats(stats) {
   if (!stats) return;
+  
+  const dupeCount = Object.keys(stats.duplicateKeys).reduce((acc, key) => acc + (stats.duplicateKeys[key].length - 1), 0);
+  const totalSkipped = stats.emptyRows.length + stats.invalidKeys.length;
 
   let message = `
-    <div class="status info">
-      <h4>Processing Summary</h4>
-      <ul>
-        ${stats.languages.length ? `<li>Languages: ${stats.languages.length}</li>` : ''}
-        ${stats.emptyRows.length ? `<li>Empty rows skipped: ${stats.emptyRows.length}</li>` : ''}
-        ${stats.emptyColumnIndices.length ? `<li>Empty columns skipped: ${stats.emptyColumnIndices.length} (positions: ${stats.emptyColumnIndices.join(', ')})</li>` : ''}
-        <li>Successfully processed: ${stats.totalRowsProcessed} rows</li>
-      </ul>
+    <div class="stats-panel">
+       <div class="stat-item">
+        <div class="stat-value">${stats.languages.length}</div>
+        <div class="stat-label">Languages</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">${stats.totalRowsProcessed}</div>
+        <div class="stat-label">Total Keys</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color: ${dupeCount > 0 ? '#dd6b20' : '#38a169'}">${dupeCount}</div>
+        <div class="stat-label">Duplicates</div>
+      </div>
+       <div class="stat-item">
+        <div class="stat-value" style="color: ${totalSkipped > 0 ? '#718096' : '#38a169'}">${totalSkipped}</div>
+        <div class="stat-label">Skipped Rows</div>
+      </div>
     </div>
   `;
+
+  // Duplicates Alert
+  if (dupeCount > 0) {
+     const examples = Object.keys(stats.duplicateKeys).slice(0, 3).map(k => {
+         return `'${k}' (rows: ${stats.duplicateKeys[k].join(', ')})`;
+     }).join("<br>");
+     
+     message += `
+       <div class="status warning" style="background:#fffaf0; color:#c05621; border:1px solid #fbd38d; margin-bottom: 15px;">
+         <strong>⚠️ Found ${dupeCount} duplicate usage(s):</strong><br>
+         <div style="font-size: 0.9em; margin-top:5px; margin-left:10px;">
+            ${examples}
+            ${Object.keys(stats.duplicateKeys).length > 3 ? '<br>...and more' : ''}
+         </div>
+       </div>
+     `;
+  }
+  
+  // Empty Columns Alert
+  if (stats.emptyColumns.length > 0) {
+      message += `
+       <div class="status info">
+         <strong>ℹ️ Empty Languages Skipped:</strong> ${stats.emptyColumns.join(', ')}
+       </div>
+      `;
+  }
+
+    // Invalid Keys Alert (e.g. empty key column)
+  if (stats.invalidKeys.length > 0) {
+      message += `
+       <div class="status info">
+         <strong>ℹ️ Skipped ${stats.invalidKeys.length} rows with invalid/empty keys</strong> (Rows: ${stats.invalidKeys.slice(0, 10).join(', ')}${stats.invalidKeys.length > 10 ? '...' : ''})
+       </div>
+      `;
+  }
 
   document.getElementById("statsStatusMessage").innerHTML = message;
 }      
@@ -1089,24 +1276,26 @@ async function downloadSingleJSON(language) {
     const format = document.getElementById('outputFormat').value;
     let content, filename, mimeType;
     
+    const data = currentData[language];
+
     switch(format) {
       case 'dart':
-        content = convertToDartMap(language, currentData[language]);
+        content = convertToDartMap(language, data);
         filename = `${sanitizeFileName(language)}.dart`;
-        mimeType = 'application/dart';
+        mimeType = 'text/plain';
         break;
       case 'arb':
-        content = convertToARB(language, currentData[language]);
+        content = convertToARB(language, data);
         filename = `${sanitizeFileName(language)}.arb`;
         mimeType = 'application/json';
         break;
       case 'map':
-        content = JSON.stringify(currentData[language], null, 2);
+        content = JSON.stringify(data, null, 2);
         filename = `${sanitizeFileName(language)}.json`;
         mimeType = 'application/json';
         break;
       default: // json
-        content = JSON.stringify(currentData[language], null, 2);
+        content = JSON.stringify(data, null, 2);
         filename = `${sanitizeFileName(language)}.json`;
         mimeType = 'application/json';
     }
@@ -1170,23 +1359,59 @@ async function downloadSingleJSON(language) {
     loadingEl.style.display = "none";
   }
 }  // Enhanced JSON parsing (replace your existing JSON parsing):
+// Enhanced JSON parsing (replace your existing JSON parsing):
 function parseFlexibleJSON(text) {
+  text = text.trim();
+  
+  // 1. Try standard JSON first
   try {
-    // Try standard JSON first
-    return parseFlexibleJSON(text);
+    return JSON.parse(text);
   } catch (e) {
+    // Continue to heuristics
+  }
+
+  // 2. Remove comments (single line // and multi-line /* */)
+  text = text.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  
+  // 3. Handle Dart Map syntax / JS Object syntax
+  // e.g. "final Map<String, String> en = { ... };" or "const data = { ... }"
+  // We just want the content between the first { and the last }
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    text = text.substring(firstBrace, lastBrace + 1);
+  }
+
+  // 4. Cleanup syntax to make it valid JSON
+  try {
+    // Replace single quotes with double quotes
+    // Note: This is a simple regex and might break if strings contain escaped single quotes or mixed quotes
+    // We try to be smart: match 'key': 'value' patterns
+    
+    // a) Remove trailing commas
+    text = text.replace(/,(\s*[}\]])/g, '$1');
+
+    // b) Replace single quoted keys: 'key': -> "key":
+    text = text.replace(/'([^']+)':/g, '"$1":');
+
+    // c) Replace single quoted values: : 'value' -> : "value"
+    // This is tricky because value might contain commas, or braces. 
+    // Let's try Eval as a fallback for Dart Maps/JS Objects as it's the most robust way to parse loose syntax
+    // BUT since we are in a browser environment, we can use new Function() which is slightly safer than eval() 
+    // but still allows parsing JS objects.
+    
+    const fn = new Function(`return ${text}`);
+    return fn();
+  } catch (e2) {
+    // If Function constructor fails, try one last dirty regex replace for simple cases
     try {
-      // Try single quotes replacement
-      const singleQuoted = text.replace(/'/g, '"');
-      return parseFlexibleJSON(singleQuoted);
-    } catch (e2) {
-      try {
-        // Try as plain JavaScript object
-        // eslint-disable-next-line no-eval
-        return eval(`(${text})`);
-      } catch (e3) {
-        throw new Error('Invalid JSON format. Please check your input.');
-      }
+        let cleaned = text
+            .replace(/'/g, '"') // Replace all single quotes with double
+            .replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+        return JSON.parse(cleaned);
+    } catch (e3) {
+        throw new Error('Could not parse input. Please ensure it is valid JSON or a simple Dart Map.');
     }
   }
 }
@@ -1274,64 +1499,35 @@ function collectExcelStats(data, options = {}) {
 
         Array.from(files).forEach((file) => {
           const reader = new FileReader();
-          // reader.onload = function (e) {
-          //   try {
-          //     const content = parseFlexibleJSON(e.target.result);
-          //     const langCode = file.name.replace(".json", "");
-          //     jsonData[langCode] = content;
-          //     processedCount++;
+          
+          reader.onload = function (e) {
+            try {
+              let content = parseFlexibleJSON(e.target.result);
+              
+              // Handle List of Strings
+              if (Array.isArray(content)) {
+                content = convertListToMap(content);
+              }
 
-          //     if (processedCount === files.length) {
-          //       displayJSONPreview();
-          //       showStatus(
-          //         `✅ Processed ${processedCount} JSON files`,
-          //         "success"
-          //       );
-          //     }
-          //   } catch (error) {
-          //     showStatus(
-          //       `❌ Error parsing ${file.name}: ${error.message}`,
-          //       "error"
-          //     );
-          //   }
-          // };
-          // In handleExcelFile(), modify the reader.onload section:
-reader.onload = function (e) {
-  try {
-    let workbook;
-    let worksheet; // Declare here
-    let jsonData;  // Declare here
+              const langCode = file.name.replace(".json", "");
+              jsonData[langCode] = content;
+              processedCount++;
 
-    try {
-      workbook = XLSX.read(e.target.result, { type: "array" });
-    } catch (arrayError) {
-      console.log("Array read failed, trying binary...", arrayError);
-      workbook = XLSX.read(e.target.result, { type: "binary" });
-    }
+              if (processedCount === files.length) {
+                displayJSONPreview();
+                showStatus(
+                  `✅ Processed ${processedCount} JSON files`,
+                  "success"
+                );
+              }
+            } catch (error) {
+              showStatus(
+                `❌ Error parsing ${file.name}: ${error.message}`,
+                "error"
+              );
+            }
+          };
 
-    const sheetName = workbook.SheetNames[0];
-    worksheet = workbook.Sheets[sheetName]; // Now initialize
-
-    if (!worksheet) throw new Error("Unable to read the first sheet");
-
-    jsonData = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: null,
-      blankrows: false,
-      raw: false,
-    });
-
-    // Now process the data
-    const stats = processExcelData(jsonData);
-    displayProcessingStats(stats); // Pass the stats object
-    displayExcelPreview();
-    showStatus("✅ Excel file processed successfully!", "success");
-
-  } catch (error) {
-    console.error("Excel processing error:", error);
-    showStatus("❌ Error: " + error.message, "error");
-  }
-};
           reader.readAsText(file);
         });
       }
@@ -1349,7 +1545,13 @@ reader.onload = function (e) {
         }
 
         try {
-          const content = parseFlexibleJSON(jsonInput);
+          let content = parseFlexibleJSON(jsonInput);
+          
+          // Handle List of Strings
+          if (Array.isArray(content)) {
+            content = convertListToMap(content);
+          }
+
           jsonData[langCode] = content;
           displayJSONPreview();
 
@@ -1361,6 +1563,22 @@ reader.onload = function (e) {
         } catch (error) {
           showStatus("❌ Invalid JSON format: " + error.message, "error");
         }
+      }
+
+      function convertListToMap(list) {
+        if (!Array.isArray(list)) return list;
+        const map = {};
+        list.forEach(item => {
+           if (typeof item === 'string') {
+             // sanitize key: lowercase, underscores, remove special chars
+             const key = item.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+             map[key] = item;
+           } else if (typeof item === 'object' && item !== null) {
+              // Try to find key/value properties if possible, logic can be expanded
+              // For now, assume List<String>
+           }
+        });
+        return map;
       }
 
       function displayJSONPreview() {
@@ -1469,33 +1687,33 @@ reader.onload = function (e) {
           };
 
           // Set appropriate file type filters
-          if (mimeType === "application/json") {
-            options.types = [
-              {
+          const ext = filename.split('.').pop().toLowerCase();
+          
+          if (ext === 'json') {
+             options.types = [{
                 description: "JSON files",
                 accept: { "application/json": [".json"] },
-              },
-            ];
-          } else if (mimeType === "application/zip") {
-            options.types = [
-              {
+             }];
+          } else if (ext === 'arb') {
+             options.types = [{
+                description: "ARB files",
+                accept: { "application/json": [".arb"] }, // ARB is technically JSON
+             }];
+          } else if (ext === 'dart') {
+             options.types = [{
+                description: "Dart files",
+                accept: { "text/plain": [".dart"] },
+             }];
+          } else if (ext === 'zip') {
+            options.types = [{
                 description: "ZIP files",
                 accept: { "application/zip": [".zip"] },
-              },
-            ];
-          } else if (
-            mimeType ===
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          ) {
-            options.types = [
-              {
+            }];
+          } else if (ext === 'xlsx') {
+             options.types = [{
                 description: "Excel files",
-                accept: {
-                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-                    [".xlsx"],
-                },
-              },
-            ];
+                accept: { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"] },
+             }];
           }
 
           const fileHandle = await window.showSaveFilePicker(options);
@@ -1562,6 +1780,183 @@ reader.onload = function (e) {
             }
           });
         });
+      }
+
+      // ---------------------------------------------------------
+      // SMART LIST PROCESSOR LOGIC
+      // ---------------------------------------------------------
+      let listProcessorData = [];
+
+      function processSmartList() {
+        const input = document.getElementById('listInput').value;
+        const autoKeys = document.getElementById('autoGenerateKeys').checked;
+        const prefix = document.getElementById('keyPrefix').value.trim();
+        
+        if (!input.trim()) {
+           showStatus("❌ Please enter some text to process.", "error");
+           return;
+        }
+
+        // 1. Parse Input
+        let items = [];
+        try {
+          // Try JSON first
+          const parsed = parseFlexibleJSON(input);
+          if (Array.isArray(parsed)) {
+            items = parsed.filter(i => typeof i === 'string' && i.trim());
+          } else {
+            throw new Error("Not an array");
+          }
+        } catch (e) {
+          // Fallback to newline split
+          items = input.split(/\n/).map(s => s.trim()).filter(s => s !== '');
+        }
+
+        if (items.length === 0) {
+           showStatus("❌ No valid items found.", "error");
+           return;
+        }
+
+        // 2. Process Items
+        const processed = [];
+        const seenKeys = new Map(); // Key -> Count
+        const duplicates = new Map(); // Key -> [Indices]
+
+        items.forEach((item, index) => {
+          let key;
+          
+          if (autoKeys) {
+            let baseKey = item.toLowerCase()
+              .replace(/\s+/g, '_')
+              .replace(/[^\p{L}\p{N}_]/gu, '')
+              // If empty after sanitization (e.g. "!!!") use "item"
+              .replace(/^$/, 'item');
+              
+             // Remove leading numbers if present (optional, but good practice)
+             // baseKey = baseKey.replace(/^\d+/, '');
+
+             key = prefix + baseKey;
+          } else {
+             // If not auto-generating, maybe expect "key: value" format? 
+             // For now, let's assume they want the string as key if unchecked?
+             // Or actually, "Auto-generate" is best kept on. If off, we can use simple increment.
+             key = prefix + `item_${index + 1}`;
+          }
+
+          // Handle Duplicate Keys
+          let finalKey = key;
+          if (seenKeys.has(key)) {
+            const count = seenKeys.get(key) + 1;
+            seenKeys.set(key, count);
+            finalKey = `${key}_${count}`;
+            
+            // Track duplicates for stats
+            if (!duplicates.has(key)) duplicates.set(key, [key]); // Add original
+            duplicates.get(key).push(finalKey);
+          } else {
+            seenKeys.set(key, 1);
+          }
+          
+          processed.push({
+             id: index + 1,
+             key: finalKey,
+             original: item,
+             isDuplicate: seenKeys.get(key) > 1
+          });
+        });
+
+        listProcessorData = processed;
+        
+        // 3. Display Results
+        displayListPreview(processed, duplicates);
+        showStatus(`✅ Processed ${processed.length} items successfully!`, "success");
+      }
+
+      function displayListPreview(data, duplicatesMap) {
+        document.getElementById('listResults').style.display = 'block';
+        
+        // Stats
+        const statsEl = document.getElementById('listStats');
+        const dupeCount = Array.from(duplicatesMap.values()).reduce((acc, val) => acc + (val.length - 1), 0);
+        
+        statsEl.innerHTML = `
+          <div class="stat-item">
+            <div class="stat-value">${data.length}</div>
+            <div class="stat-label">Total Items</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" style="color: ${dupeCount > 0 ? '#dd6b20' : '#38a169'}">${dupeCount}</div>
+            <div class="stat-label">Duplicates Resolved</div>
+          </div>
+        `;
+
+        // Alerts
+        const alertEl = document.getElementById('duplicateAlerts');
+        if (dupeCount > 0) {
+           const examples = Array.from(duplicatesMap.keys()).slice(0, 5).map(k => `'${k}'`).join(", ");
+           alertEl.innerHTML = `
+             <div class="status warning" style="background:#fffaf0; color:#c05621; border:1px solid #fbd38d;">
+               <strong>⚠️ Duplicates handled:</strong> Found duplicate keys for ${examples}${duplicatesMap.size > 5 ? '...' : ''}. 
+               <br>We've automatically appended numbers (e.g. _2, _3) to keep them unique.
+             </div>
+           `;
+        } else {
+           alertEl.innerHTML = '';
+        }
+
+        // Table
+        const tbody = document.getElementById('listTableBody');
+        tbody.innerHTML = data.map(row => `
+           <tr style="${row.isDuplicate ? 'background: #fffaf0;' : ''}">
+             <td>${row.id}</td>
+             <td><code style="color:#2b6cb0; font-weight:bold;">${row.key}</code></td>
+             <td>${row.original}</td>
+             <td>
+               ${row.isDuplicate 
+                 ? '<span class="badge badge-warning">Renamed</span>' 
+                 : '<span class="badge badge-success">OK</span>'}
+             </td>
+           </tr>
+        `).join('');
+      }
+
+      async function exportListToExcel() {
+        if (!listProcessorData.length) return;
+        
+        try {
+          const wsData = [
+             ['Key', 'Value (en)'] // Header
+          ];
+          
+          listProcessorData.forEach(item => {
+             wsData.push([item.key, item.original]);
+          });
+
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.aoa_to_sheet(wsData);
+          XLSX.utils.book_append_sheet(wb, ws, "Translations");
+          
+          const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+          const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+          
+          await downloadFile("smart_list_export.xlsx", blob, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+          showStatus("✅ Excel exported successfully!", "success");
+        } catch (e) {
+          showStatus("❌ Export failed: " + e.message, "error");
+        }
+      }
+
+      async function exportListToJSON() {
+         if (!listProcessorData.length) return;
+         
+         const map = {};
+         listProcessorData.forEach(item => {
+            map[item.key] = item.original;
+         });
+         
+         const content = JSON.stringify(map, null, 2);
+         await downloadFile("smart_list_export.json", content, "application/json");
+         showStatus("✅ JSON exported successfully!", "success");
       }
 
       // Initialize
