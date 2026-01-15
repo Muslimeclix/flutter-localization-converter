@@ -4,6 +4,9 @@ A web-based tool to convert between:
 - Excel ↔ JSON
 - Excel ↔ Dart GetX Maps
 - Excel ↔ Flutter ARB files
+- List<String> ↔ Excel
+- JSON ↔ List<String>
+
 
 ## Features
 ✅ Handles single/double quotes in JSON  
@@ -11,6 +14,9 @@ A web-based tool to convert between:
 ✅ Auto-sanitizes filenames (spaces → underscores)  
 ✅ Drag & drop support  
 ✅ Batch processing  
+✅ Auto-generate keys from text
+✅ Auto-detects duplicate keys
+
 
 ## Quick Start
 1. Open `index.html` in any browser
@@ -23,3 +29,9 @@ Want to host this yourself? Simply clone this repo and open `index.html`.
 
 ## License
 MIT - Free for personal & commercial use
+
+## Contact
+Muslim bin Sohail
+https://github.com/muslimbinsohail
+
+
